@@ -11,22 +11,22 @@ void map(I *in, O *out, unsigned start, unsigned finish, std::function<O(I)> &f)
   }
 }
 
-template<typename T>
-void upward(T *array, unsigned start, unsigned finish) {
+template<typename I, typename O>
+void upward(const I *array, O* output, unsigned start, unsigned finish, std::function<O(const I&)> &f) {
   if (start - finish == 0) {
     return;
   }
   else if (finish - start == 1) {
-    array[finish] += array[start];
+    output[finish] = f(array[finish]) + f(array[start]);
   }
   else {
     unsigned m = (finish + start) / 2;
 #pragma omp task
-    { upward(array, start, m); }
+    { upward(array, output, start, m, f); }
 #pragma omp task
-    { upward(array, m+1, finish); }
+    { upward(array, output, m+1, finish, f); }
 #pragma omp taskwait
-    array[finish] += array[m];
+    output[finish] += output[m];
   }
 }
 
@@ -47,14 +47,13 @@ void downward(T *array, unsigned start, unsigned finish) {
   }
 }
 
-template<typename T>
-void scan(T *array, unsigned start, unsigned finish) {
-  upward(array, start, finish-1);
-  T temp = array[finish-1];
-  array[finish - 1] = 0;
-  downward(array, start, finish-1);
-  memmove(array+start, array+start+1, (finish - start - 1) * sizeof(T));
-  array[finish-1] = temp;
+template<typename I, typename O>
+O scan(const I *array, O *output, unsigned start, unsigned finish, std::function<O(const I&)> &f) {
+  upward(array, output, start, finish-1, f);
+  O temp = output[finish-1];
+  output[finish - 1] = 0;
+  downward(output, start, finish-1);
+  return temp;
 }
 
 template<typename T>
@@ -69,6 +68,7 @@ unsigned filter_seq(T *in, T *out, unsigned start, unsigned finish, std::functio
   return ind;
 }
 
+/*
 template<typename T>
 unsigned filter_par(T *in, T *out, bool* buf1, T* buf2, unsigned start, unsigned finish, std::function<bool(T)> &pred) {
   map(in, buf1, start, finish, pred);
@@ -85,6 +85,7 @@ unsigned filter_par(T *in, T *out, bool* buf1, T* buf2, unsigned start, unsigned
   }
   return buf2[finish - 1];
 }
+*/
 
 #endif //CILK_QUICKSORT__PARALLEL_UTILS_H_
 
