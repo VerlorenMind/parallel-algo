@@ -3,6 +3,13 @@
 #include <fstream>
 #include <iostream>
 
+void usage() {
+  std::cout << "Usage: " << std::endl;
+  std::cout << "gen_cube side graph_file" << std::endl;
+  std::cout << "side - the side of cube graph to be generated" << std::endl;
+  std::cout << "graph_file - output file" << std::endl;
+}
+
 void gen_cube(unsigned side, std::ostream &out) {
   out << side * side * side << std::endl;
   auto num = [&side] (unsigned i, unsigned j, unsigned k) {return i * side * side + j * side + k; };
@@ -36,6 +43,7 @@ void gen_cube(unsigned side, std::ostream &out) {
 }
 
 int main(int argc, const char **argv) {
+  if(argc != 3) { usage(); return 1; }
   unsigned side = atoi(argv[1]);
   std::string filename(argv[2]);
   std::ofstream out(filename);

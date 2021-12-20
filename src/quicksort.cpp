@@ -61,7 +61,7 @@ bool verify(unsigned *array, unsigned n) {
 
 void usage() {
   std::cout << "Usage: " << std::endl;
-  std::cout << "quicksort size granularity" << std::endl;
+  std::cout << "parallel_algo size granularity" << std::endl;
   std::cout << "size - size of the array to sort" << std::endl;
   std::cout << "granularity - requlates the size of a block for sequential sorting (block = size / granularity)" << std::endl;
 }
