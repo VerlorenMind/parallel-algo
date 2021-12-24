@@ -12,20 +12,25 @@ Node* load_graph(std::ifstream &input_file, unsigned &graph_size);
 void free_graph(Node *graph, unsigned size);
 
 class BFS {
+ protected:
+  bool* visited;
+  unsigned* distance;
+  unsigned graph_size;
  public:
+  explicit BFS(unsigned graph_size);
+  ~BFS();
   virtual void search(const Node *graph) = 0;
-  virtual bool verify() = 0;
-  virtual void reset() = 0;
+  bool verify_visited();
+  bool verify_distance();
+  void reset();
+  void log_distances(std::ostream &out);
 };
 class BFSSequential : public BFS {
  private:
   std::queue<unsigned> q;
-  std::vector<bool> visited;
  public:
   explicit BFSSequential(unsigned graph_size);
   void search(const Node *graph) override;
-  bool verify() override;
-  void reset() override;
 };
 
 class BFSParallel : public BFS {
@@ -36,13 +41,9 @@ class BFSParallel : public BFS {
   unsigned *buf2;
   unsigned *degs;
   unsigned *degs_out;
-  bool *visited;
-  unsigned graph_size;
  public:
   explicit BFSParallel(unsigned graph_size);
   void search(const Node *graph) override;
-  bool verify() override;
   ~BFSParallel();
-  void reset() override;
 };
 #endif //QUICKSORT_INCLUDE_BFS_H_

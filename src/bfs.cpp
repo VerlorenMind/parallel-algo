@@ -2,6 +2,7 @@
 #include <fstream>
 #include <cstring>
 #include <chrono>
+#include <cmath>
 #include "parallel_utils.h"
 #include "bfs.h"
 
@@ -29,9 +30,59 @@ void free_graph(Node *graph, unsigned size) {
   delete[] graph;
 }
 
+BFS::BFS(unsigned graph_size) : graph_size(graph_size) {
+  visited = new bool[graph_size];
+  distance = new unsigned[graph_size];
+  reset();
+}
+BFS::~BFS() {
+  delete[] visited;
+  delete[] distance;
+}
+bool BFS::verify_visited() {
+  for(unsigned i = 0; i < graph_size; ++i) {
+    if(!visited[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void BFS::reset() {
+  memset(visited, 0, graph_size * sizeof(bool));
+  memset(distance, 0, graph_size*sizeof(unsigned));
+}
+
+void BFS::log_distances(std::ostream &out) {
+  for(unsigned i=0; i<graph_size; ++i) {
+    out << distance[i] << std::endl;
+  }
+}
+
+bool BFS::verify_distance() {
+  unsigned side = std::cbrt(graph_size);
+  for(unsigned i=0; i < graph_size; ++i) {
+    unsigned decomp = i;
+    unsigned true_dist = decomp / (side * side);
+    decomp %= (side * side);
+    true_dist += decomp / side;
+    decomp %= side;
+    true_dist += decomp;
+    if(true_dist != distance[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+BFSSequential::BFSSequential(unsigned graph_size): BFS(graph_size) {
+
+}
+
 void BFSSequential::search(const Node* nodes) {
   q.push(0);
   visited[0] = true;
+  distance[0] = 0;
   while(!q.empty()) {
     unsigned cur = q.front();
     q.pop();
@@ -39,27 +90,11 @@ void BFSSequential::search(const Node* nodes) {
       unsigned neigh = nodes[cur].neighbors[i];
       if(!visited[neigh]) {
         q.push(nodes[cur].neighbors[i]);
+        distance[neigh] = distance[cur] + 1;
         visited[neigh] = true;
       }
     }
   }
-}
-
-BFSSequential::BFSSequential(unsigned graph_size) {
-  visited.resize(graph_size, false);
-}
-
-bool BFSSequential::verify() {
-  for(auto i = visited.begin(); i != visited.end(); ++i) {
-    if(!*i) {
-      return false;
-    }
-  }
-  return true;
-}
-
-void BFSSequential::reset() {
-  std::fill(visited.begin(), visited.end(), false);
 }
 
 void BFSParallel::search(const Node* nodes) {
@@ -67,6 +102,7 @@ void BFSParallel::search(const Node* nodes) {
   std::function<unsigned(int)> filter_missed = [nodes](int x) -> unsigned { return x >= 0 ? 1 : 0; };
   front[0] = 0;
   visited[0] = true;
+  distance[0] = 0;
   unsigned front_size = 1;
   while (front_size > 0) {
     map(front, degs, 0, front_size, get_deg);
@@ -77,14 +113,15 @@ void BFSParallel::search(const Node* nodes) {
 //#pragma omp parallel for
       for(unsigned j = 0; j < nodes[front[i]].deg; ++j) {
         unsigned neigh = nodes[front[i]].neighbors[j];
-        bool val;
+        bool taken;
 #pragma omp atomic capture
         {
-          val = visited[neigh];
+          taken = visited[neigh];
           visited[neigh] = true;
         }
-        if (!val) {
+        if (!taken) {
           front_buf[degs_out[i] + j] = neigh;
+          distance[neigh] = distance[front[i]] + 1;
         }
         else {
           front_buf[degs_out[i] + j] = -1;
@@ -95,25 +132,15 @@ void BFSParallel::search(const Node* nodes) {
   }
 }
 
-BFSParallel::BFSParallel(unsigned graph_size) {
+BFSParallel::BFSParallel(unsigned graph_size): BFS(graph_size) {
   front = new int[graph_size];
   front_buf = new int[graph_size];
   buf1 = new unsigned[graph_size];
   buf2 = new unsigned[graph_size];
   degs = new unsigned[graph_size];
   degs_out = new unsigned[graph_size];
-  visited = new bool[graph_size];
-  this->graph_size = graph_size;
 }
 
-bool BFSParallel::verify() {
-  for(unsigned i = 0; i < graph_size; ++i) {
-    if(!visited[i]) {
-      return false;
-    }
-  }
-  return true;
-}
 BFSParallel::~BFSParallel() {
   delete[] front;
   delete[] front_buf;
@@ -121,9 +148,5 @@ BFSParallel::~BFSParallel() {
   delete[] buf2;
   delete[] degs;
   delete[] degs_out;
-  delete[] visited;
 
-}
-void BFSParallel::reset() {
-  memset(visited, 0, graph_size * sizeof(bool));
 }
