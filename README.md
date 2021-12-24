@@ -20,7 +20,7 @@ Output file is in the following form:
     number_of_vertices
     [vertex_i_degree neighbor_0 neighbor_1 ...]
     ...
-#Parallel BFS
+# Parallel BFS
 ## Usage
     Usage: 
     bfs graph_file launches
